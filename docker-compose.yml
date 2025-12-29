@@ -14,7 +14,7 @@ services:
         restart: always 
 
     api: 
-        container_name: flashfy-api
+        container_name: transactions-api
         build: . 
         restart: always
         ports:
