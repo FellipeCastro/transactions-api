@@ -1,5 +1,6 @@
 import { Router } from "express";
 import sequelize from "../src/config/database.js";
+import TransactionController from "./controllers/TransactionController.js";
 
 const router = Router();
 
@@ -13,5 +14,7 @@ router.get("/health", (req, res) => {
             res.status(500).json({ status: "DOWN", message: "Database connection failed.", error: error.message });
         });
 });
+
+router.post("transaction", TransactionController.Create);
 
 export default router;

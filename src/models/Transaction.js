@@ -36,18 +36,6 @@ const Transaction = sequelize.define(
             defaultValue: DataTypes.NOW,
             allowNull: false,
         },
-    },
-    {
-        tableName: "transactions",
-        timestamps: true,
-        updatedAt: false,
-        underscored: true,
-        indexes: [
-            {
-                name: "idx_transactions_datahora",
-                fields: ["data_hora"],
-            },
-        ],
     }
 );
 
