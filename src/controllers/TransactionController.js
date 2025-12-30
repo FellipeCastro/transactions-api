@@ -19,6 +19,11 @@ class TransactionController {
         await TransactionService.DeleteAll();
         return res.status(204).send();
     }
+
+    async GetStatistics(req, res) {
+        const stats = await TransactionService.GetStatistics();
+        return res.status(200).json(stats);
+    }
 }
 
 export default new TransactionController();

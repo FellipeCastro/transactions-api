@@ -21,4 +21,7 @@ router.post("/transaction", TransactionController.Create);
 // transaction deletion route
 router.delete("/transaction", TransactionController.Delete);
 
+// transaction statistics route
+router.get("/statistics", TransactionController.GetStatistics);
+
 export default router;

@@ -39,7 +39,29 @@ class TransactionService {
     }
 
     async DeleteAll() {
-        await TransactionRepository.DeleteAll();
+        return await TransactionRepository.DeleteAll();
+    }
+
+    async GetStatistics(seconds = 60) {
+        const result = await TransactionRepository.GetStatistics(seconds);
+        
+        if (!result || !result.count || parseInt(result.count) === 0) {
+            return {
+                count: 0,
+                sum: 0,
+                avg: 0,
+                min: 0,
+                max: 0,
+            };
+        }
+
+        return {
+            count: parseInt(result.count),
+            sum: parseFloat(result.sum) || 0,
+            avg: parseFloat(result.avg) || 0,
+            min: parseFloat(result.min) || 0,
+            max: parseFloat(result.max) || 0,
+        };
     }
 }
 
