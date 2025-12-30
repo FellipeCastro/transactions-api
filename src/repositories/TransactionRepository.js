@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import Transaction from "../models/Transaction.js";
 
 class TransactionRepository {
@@ -5,8 +6,8 @@ class TransactionRepository {
         await Transaction.create({ value, dateHour });
     }
 
-    async Delete(idTransaction) {
-        await Transaction.destroy({ where: { id: idTransaction } });
+    async DeleteAll() {
+        await Transaction.destroy({ where: {} });
     }
 
     async FindById(idTransaction) {

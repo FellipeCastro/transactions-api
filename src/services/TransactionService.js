@@ -38,14 +38,8 @@ class TransactionService {
         return await TransactionRepository.Create(value, dateHour);
     }
 
-    async Delete(idTransaction) {
-        const transaction = await TransactionRepository.FindById(idTransaction);
-        if (!transaction) {
-            throw new UnprocessableEntityError(
-                "Transaction not found."
-            );
-        }
-        await TransactionRepository.Delete(idTransaction);
+    async DeleteAll() {
+        await TransactionRepository.DeleteAll();
     }
 }
 

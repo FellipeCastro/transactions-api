@@ -16,9 +16,7 @@ class TransactionController {
     }
 
     async Delete(req, res) {
-        const { idTransaction } = req.params;
-
-        await TransactionService.Delete(idTransaction);
+        await TransactionService.DeleteAll();
         return res.status(204).send();
     }
 }
