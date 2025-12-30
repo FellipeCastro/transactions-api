@@ -5,8 +5,8 @@ import errorMiddleware from "./middlawares/error.js";
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 app.use(router);
 app.use(errorMiddleware);
 

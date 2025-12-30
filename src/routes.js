@@ -15,6 +15,7 @@ router.get("/health", (req, res) => {
         });
 });
 
-router.post("transaction", TransactionController.Create);
+// transaction creation route
+router.post("/transaction", TransactionController.Create);
 
 export default router;
