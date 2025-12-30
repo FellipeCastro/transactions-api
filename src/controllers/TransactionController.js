@@ -14,6 +14,13 @@ class TransactionController {
         await TransactionService.Create(value, dateHour);
         return res.status(201).send();
     }
+
+    async Delete(req, res) {
+        const { idTransaction } = req.params;
+
+        await TransactionService.Delete(idTransaction);
+        return res.status(204).send();
+    }
 }
 
 export default new TransactionController();

@@ -18,4 +18,7 @@ router.get("/health", (req, res) => {
 // transaction creation route
 router.post("/transaction", TransactionController.Create);
 
+// transaction deletion route
+router.delete("/transaction/:idTransaction", TransactionController.Delete);
+
 export default router;
