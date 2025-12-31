@@ -11,7 +11,7 @@ import app from "../../src/app.js";
 import sequelize from "../../src/config/database.js";
 import Transaction from "../../src/models/Transaction.js";
 
-// Dados de teste para o beforeEach
+// Dados de teste
 const testTransactions = [
     {
         value: 100.5,
@@ -27,93 +27,173 @@ const testTransactions = [
     },
 ];
 
-describe("API E2E Test Suite", () => {
-    // Setup e Teardown
-    beforeAll(async () => {
-        // Configura o ambiente de teste
-        if (process.env.NODE_ENV !== "test") {
-            process.env.NODE_ENV = "test";
-            console.log("⚠️  Forçando NODE_ENV=test para execução dos testes");
-        }
+// Configuração do ambiente de teste
+const setupTestEnvironment = async () => {
+    if (process.env.NODE_ENV !== "test") {
+        process.env.NODE_ENV = "test";
+        console.log("Ambiente configurado para testes");
+    }
 
-        // Verifica conexão com o banco de testes
-        try {
-            await sequelize.authenticate();
-            console.log("✅ Conexão com banco de testes estabelecida");
-        } catch (error) {
-            console.error(
-                "❌ Erro ao conectar ao banco de testes:",
-                error.message
-            );
-            throw error;
-        }
+    try {
+        await sequelize.authenticate();
+        console.log("Conexão com banco estabelecida");
+    } catch (error) {
+        console.error("Erro ao conectar ao banco:", error.message);
+        throw error;
+    }
+};
+
+const cleanupDatabase = async () => {
+    console.log("Limpando banco de dados...");
+
+    await Transaction.destroy({
+        where: {},
+        truncate: true,
+        cascade: true,
+        force: true,
     });
 
-    beforeEach(async () => {
-        console.log("🧹 Cleaning database before test...");
+    await Transaction.bulkCreate(testTransactions);
+    console.log(
+        `Dados de teste inseridos: ${testTransactions.length} transações`
+    );
+};
 
-        // Limpa completamente o banco de dados
-        await Transaction.destroy({
-            where: {},
-            truncate: true,
-            cascade: true,
-            force: true,
+const closeDatabaseConnection = async () => {
+    try {
+        await sequelize.close();
+        console.log("Conexão com banco encerrada");
+    } catch (error) {
+        console.error("Erro ao encerrar conexão:", error.message);
+    }
+};
+
+// Funções auxiliares
+const createTransactionData = (value, dateHour) => ({ value, dateHour });
+
+const createFutureDate = () => {
+    const futureDate = new Date();
+    futureDate.setHours(futureDate.getHours() + 1);
+    return futureDate;
+};
+
+// Testes
+describe("API E2E Test Suite", () => {
+    beforeAll(setupTestEnvironment);
+    beforeEach(cleanupDatabase);
+    afterAll(closeDatabaseConnection);
+
+    describe("Health Check", () => {
+        test("GET /health deve retornar status 200", async () => {
+            const response = await request(app).get("/health");
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("status", "UP");
+            expect(response.body).toHaveProperty(
+                "message",
+                "Database connection is healthy."
+            );
+        });
+    });
+
+    describe("Criação de Transações", () => {
+        test("POST /transaction deve criar transação e retornar 201", async () => {
+            const transactionData = createTransactionData(
+                100.5,
+                new Date().toISOString()
+            );
+
+            const response = await request(app)
+                .post("/transaction")
+                .send(transactionData);
+
+            expect(response.status).toBe(201);
         });
 
-        // Insere dados de teste
-        await Transaction.bulkCreate(testTransactions);
+        test("POST /transaction deve retornar 422 quando valor e data são nulos", async () => {
+            const transactionData = { value: null, dateHour: null };
 
-        console.log(
-            `✅ Database seeded with ${testTransactions.length} test transactions`
-        );
-    });
+            const response = await request(app)
+                .post("/transaction")
+                .send(transactionData);
 
-    afterAll(async () => {
-        try {
-            // Fecha a conexão com o banco
-            await sequelize.close();
-            console.log("✅ Database connection closed");
-        } catch (error) {
-            console.error(
-                "❌ Error closing database connection:",
-                error.message
+            expect(response.status).toBe(422);
+            expect(response.body).toHaveProperty(
+                "error",
+                "Value and dateHour are required."
             );
-        }
+        });
+
+        test("POST /transaction deve retornar 422 quando data está no futuro", async () => {
+            const futureDate = createFutureDate();
+            const transactionData = createTransactionData(
+                100.5,
+                futureDate.toISOString()
+            );
+
+            const response = await request(app)
+                .post("/transaction")
+                .send(transactionData);
+
+            expect(response.status).toBe(422);
+            expect(response.body).toHaveProperty(
+                "error",
+                "dateHour cannot be in the future."
+            );
+        });
+
+        test("POST /transaction deve retornar 422 quando data é inválida", async () => {
+            const transactionData = createTransactionData(
+                100.5,
+                "invalid-date-string"
+            );
+
+            const response = await request(app)
+                .post("/transaction")
+                .send(transactionData);
+
+            expect(response.status).toBe(422);
+            expect(response.body).toHaveProperty(
+                "error",
+                "dateHour must be a valid date."
+            );
+        });
+
+        test("POST /transaction deve retornar 422 quando valor é negativo", async () => {
+            const transactionData = {
+                value: -100.5,
+                dateHour: new Date().toISOString(),
+            };
+
+            const response = await request(app)
+                .post("/transaction")
+                .send(transactionData);
+
+            expect(response.status).toBe(422);
+            expect(response.body).toHaveProperty(
+                "error",
+                "Value must be a non-negative number."
+            );
+        });
     });
 
-    test("GET /health - should return health status 200", async () => {
-        const response = await request(app).get("/health");
-        expect(response.status).toBe(200);
-        expect(response.body).toHaveProperty("status", "UP");
-        expect(response.body).toHaveProperty(
-            "message",
-            "Database connection is healthy."
-        );
+    describe("Exclusão de Transações", () => {
+        test("DELETE /transaction deve apagar todas transações e retornar 204", async () => {
+            const response = await request(app).delete("/transaction");
+            expect(response.status).toBe(204);
+        });
     });
 
-    test("POST /transaction - should create a transaction and return 201", async () => {
-        const transactionData = {
-            value: 100.5,
-            dateHour: new Date().toISOString(),
-        };
-        const response = await request(app)
-            .post("/transaction")
-            .send(transactionData);
-        expect(response.status).toBe(201);
-    });
+    describe("Estatísticas", () => {
+        test("GET /statistics deve retornar estatísticas com status 200", async () => {
+            const response = await request(app).get("/statistics");
 
-    test("DELETE /transaction - should delete all transactions and return 204", async () => {
-        const response = await request(app).delete("/transaction");
-        expect(response.status).toBe(204);
-    });
-
-    test("GET /statistics - should return statistics stats 200", async () => {
-        const response = await request(app).get("/statistics");
-        expect(response.status).toBe(200);
-        expect(response.body).toHaveProperty("sum");
-        expect(response.body).toHaveProperty("avg");
-        expect(response.body).toHaveProperty("max");
-        expect(response.body).toHaveProperty("min");
-        expect(response.body).toHaveProperty("count");
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("count", 1);
+            expect(response.body).toHaveProperty("sum", 100.5);
+            expect(response.body).toHaveProperty("avg", 100.5);
+            expect(response.body).toHaveProperty("min", 100.5);
+            expect(response.body).toHaveProperty("max", 100.5);
+        });
     });
 });
